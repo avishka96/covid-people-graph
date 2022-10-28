@@ -34,11 +34,13 @@ class NNHandler_person(NNHandler_yolo):
 		super().__init__(json_file=json_file, is_tracked=is_tracked, vis=vis, verbose=verbose, debug=debug)
 		print("\t[*] Person detector")
 
+	# WTF?
 	def extractValForKey(self,st,startSt,endSt):
 		a=st.index(startSt)+len(startSt)
 		b=st.index(endSt)
 		return st[a:b].strip()
 
+	# WTF?
 	def refinePersonTrajectory(self,p):
 		# @ Is this function working?? getparam needs 2 arguments
 		firstApperanceT=0
@@ -55,16 +57,23 @@ class NNHandler_person(NNHandler_yolo):
 
 		print("This person is visible only from {} to {} frames".format(firstApperanceT,lastAppearanceT))
 
-	def update_graph_nodes(self, start_time=None, end_time = None):
-		if start_time is None: start_time = 0
-		if end_time is None: end_time = self.time_series_length
 
+	def update_graph_nodes(self, start_time=None, end_time = None):
+		if start_time is None:
+			start_time = 0
+		if end_time is None:
+			end_time = self.time_series_length
+
+		# From where graph came?
 		graph = self.graph
-		if graph.time_series_length is None: graph.time_series_length = end_time-start_time
-		else: raise Exception("Graph is not empty")
+		if graph.time_series_length is None:
+			graph.time_series_length = end_time-start_time
+		else:
+			raise Exception("Graph is not empty")
 
 		assert len(graph.nodes) == 0, "Graph not empty. Cannot update non-empty graph"
 
+		# Empty dict by default?
 		person_dic = defaultdict(dict)
 
 		for t in range(start_time, end_time):
@@ -86,6 +95,7 @@ class NNHandler_person(NNHandler_yolo):
 
 		# print(person_dic)
 
+		# Sorted according to IDs
 		for idx in sorted(person_dic):
 			# TEMP SOLUTION FOR GIHAN
 
@@ -114,8 +124,8 @@ class NNHandler_person(NNHandler_yolo):
 
 if __name__=="__main__":
 
-	json_loc = "./data/labels/DEEE/yolo/cctv3-yolo.json"
-	img_loc = "./data/videos/DEEE/cctv3.mp4"
+	json_loc = "./data/labels/Test/test_out.json"
+	img_loc = "./suren/temp/frames"
 
 	parser = argparse.ArgumentParser()
 
@@ -128,8 +138,8 @@ if __name__=="__main__":
 
 	args = parser.parse_args()
 
-	args.input = "./data/videos/TownCentreXVID.mp4"
-	args.output = "./data/labels/TownCentre/person_5.json"
+	args.input = "./suren/temp/frames"
+	args.output = "./data/labels/Test/test_out.json"
 	args.overwrite = False
 	args.verbose=True
 	args.visualize=True
@@ -138,7 +148,7 @@ if __name__=="__main__":
 	json_loc = args.output
 
 	# TEST
-	img_handle = NNHandler_image(format="avi", img_loc=img_loc)
+	img_handle = NNHandler_image(format="png", img_loc=img_loc)
 	img_handle.runForBatch()
 
 	person_handler = NNHandler_person(json_file=json_loc, vis=args.visualize, is_tracked=args.tracked, verbose=args.verbose, debug=False)

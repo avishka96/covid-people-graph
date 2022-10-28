@@ -17,26 +17,29 @@ from suren.util import eprint, progress, Json
 
 try:
     import matplotlib
+
+    # Selecting proper backend for plotting
     matplotlib.use('Agg')
 
     # import networkx as nx
     import matplotlib.pyplot as plt
     import matplotlib.cm as cm
-    plt.rc('ytick',labelsize=15)
-    plt.rc('xtick',labelsize=15)
+
+    plt.rc('ytick', labelsize=15)
+    plt.rc('xtick', labelsize=15)
 except ImportError as e:
     print(e)
 
 
 class Visualizer:
-
-
+    # color map generation method
+    # Static method. Hence, does not depend on visualizer objects
     @staticmethod
-    def get_cmap(size : list):
+    def get_cmap(size: list):
         if len(size) == 1:
             n = size[0]
             cmap = plt.get_cmap('hsv')
-            sample = np.linspace(0, 1, n+1)[:-1]
+            sample = np.linspace(0, 1, n + 1)[:-1]
             colors = np.array([cmap(i) for i in sample])
             return colors
         elif len(size) == 2:
@@ -44,7 +47,7 @@ class Visualizer:
             # cmap = plt.get_cmap('hsv')
             # window = 10
             cmap = plt.get_cmap('hsv')
-            sample = np.linspace(0, 1, n+1)[:-1]
+            sample = np.linspace(0, 1, n + 1)[:-1]
             colors = np.array([cmap(i) for i in sample])
             col_arr = np.ones((window, 4))
             col_arr[:, -1] = np.power(.8, np.arange(window))[::-1]
@@ -57,6 +60,8 @@ class Visualizer:
         else:
             raise NotImplementedError
 
+    # Obtaining initializing inputs from .ini file
+    # See .ini files in data/config for structure
     @staticmethod
     def read_ini(file_path, args):
         config = configparser.ConfigParser()
@@ -76,6 +81,7 @@ class Visualizer:
 
         return args
 
+    # Initialization
     def __init__(self, graph=None, person=None, handshake=None, img=None, openpose=None, debug=False):
         self.graph = graph
         self.person_handle = person
@@ -87,35 +93,38 @@ class Visualizer:
         self.time_series_length = None
 
         # Scatter plot components
-        self.make_plot = False      # create plot (Everything below wont matter is this isn't set)
-        self.plot_show = False      # show plot
-        self.plot_out_name = None   # save plot
+        self.make_plot = False  # create plot (Everything below wont matter if this isn't set)
+        self.plot_show = False  # show plot
+        self.plot_out_name = None  # save plot
         self.plot_scatter = False
         self.plot_lines = False
         self.plot_group = False
 
         # Img/Video components
-        self.make_vid = False       # create video frame (Everything below wont matter is this isn't set)
-        self.vid_show = False      # show vid
-        self.vid_out_name = None   # save vid
-        self.img_out_name = None   # save vid as frames (only prefix here... )
+        self.make_vid = False  # create video frame (Everything below wont matter if this isn't set)
+        self.vid_show = False  # show vid
+        self.vid_out_name = None  # save vid
+        self.img_out_name = None  # save vid as frames (only prefix here... )
         self.vid_bbox = False
         self.vid_hbox = False
         self.vid_scatter = False
         self.vid_lines = False
-        self.vid_keypoints = False      # openpose
+        self.vid_keypoints = False  # openpose
 
         # Common to plot and vid
-        self.mark_ref =True
+        self.mark_ref = True
 
         # Info from img_handle
         self.start_time = 0
         self.end_time = None
+        # height and width obtained from img_handle
         self.hw = None if self.img_handle is None else (img_handle.height, img_handle.width)
 
-    def init_plot(self, plot_out : str = None, network_scatter=True, network_lines=True, network_group=True, network_show=False):
+    def init_plot(self, plot_out: str = None, network_scatter=True, network_lines=True, network_group=True,
+                  network_show=False):
+        # Raise Assertion error if graph is not present
         assert self.graph is not None, "Graph cannot be empty while plotting"
-        self.make_plot = True
+        self.make_plot = True       # Need to be true to create a plot
 
         self.plot_out_name = plot_out
         self.plot_show = network_show
@@ -123,10 +132,10 @@ class Visualizer:
         self.plot_lines = network_lines
         self.plot_group = network_group
 
-    def init_vid(self, vid_out : str = None, img_out : str = None, vid_show = False,
+    def init_vid(self, vid_out: str = None, img_out: str = None, vid_show=False,
                  vid_bbox=True, vid_hbox=True, vid_keypoints=True, vid_group=True,
                  vid_scatter=False, vid_lines=False):
-        self.make_vid = True
+        self.make_vid = True        # Need to be true to create video
 
         self.vid_out_name = vid_out
         self.img_out_name = img_out
@@ -138,23 +147,31 @@ class Visualizer:
         self.vid_keypoints = vid_keypoints
         self.vid_group = vid_group
 
-    def plot(self, WAIT=20, col_num:int = None, debug=False):
+    def plot(self, WAIT=20, col_num: int = None, debug=False):
 
+        # plot_import() is a method in graph.py
+        # Imports necessary packages required for plot
         if Graph.plot_import() is not None:
             eprint("Package not installed", Graph.plot_import())
             return
 
+        # Raise assertion error if both graph & img none
         assert self.graph is not None or self.img_handle is not None, "Cannot visualize anything if both Image handle and graph is None"
 
+        # vid/img given
         if self.img_handle is not None:
+            # num frames = end time - start time
             if self.img_handle.start_time is not None and self.img_handle.end_time is not None:
                 self.start_time = self.img_handle.start_time
                 self.end_time = self.img_handle.end_time
                 self.time_series_length = self.end_time - self.start_time
+            # num frames given as time series length
             else:
                 self.time_series_length = self.img_handle.time_series_length
 
+        # graph is given
         elif self.graph is not None:
+            # num frames given in graph object
             self.time_series_length = self.graph.time_series_length
         else:
             raise NotImplementedError
@@ -169,11 +186,12 @@ class Visualizer:
         else:
             raise NotImplementedError
 
-        cmap_vid = np.array(self.cmap[:, :-1] * 255)[:, [2, 1, 0]]      # RGB and then to BGR
-        cmap_plot = np.reshape(self.cmap, (-1, 4), order='C')        # RGB alpha
+        cmap_vid = np.array(self.cmap[:, :-1] * 255)[:, [2, 1, 0]]  # RGB and then to BGR
+        cmap_plot = np.reshape(self.cmap, (-1, 4), order='C')  # RGB alpha
         # cmap_ = cv2.cvtColor(cmap_.reshape(1, -1, 3), cv2.COLOR_RGB2BGR).reshape(-1, 3)
 
         # Process and get all graph points till time t
+        # Why pass?
         if self.graph is not None:
             pass
 
@@ -188,36 +206,49 @@ class Visualizer:
 
         # MAKE Video
         if self.make_vid:
+            # Raise assertion error if img/video is not available.
+            # To produce video, img/video must be available
             assert self.img_handle is not None, "Image handle cannot be None, if video is required"
 
             if self.vid_show:
                 cv2.namedWindow("plot")
 
             # SAVE VIDEO
+            # self.img_out_name: loc to save video
+            # if file does not exist, create file
             if self.img_out_name is not None and not os.path.exists(self.img_out_name):
                 os.makedirs(self.img_out_name)
 
             if self.vid_out_name is not None:
+                # if directory does not exist, create directory
                 if not os.path.exists(os.path.dirname(self.vid_out_name)):
                     os.makedirs(os.path.dirname(self.vid_out_name))
 
+                # open img/video
                 self.img_handle.open()
+                # read frames of the img/video
                 rgb = self.img_handle.read_frame()
+                # close img_handle
                 self.img_handle.close()
+                # Write video to loc
                 h, w, _ = rgb.shape
                 fourcc = cv2.VideoWriter_fourcc(*'XVID')
                 vid_out = cv2.VideoWriter(self.vid_out_name, fourcc, 20.0, (w, h))
 
         # MAKE plot
         if self.make_plot:
+            # Raise assertion error if self.graph (graph object) is none
             assert self.graph is not None, "cannot plot without graph"
 
             sc_x_, sc_y_ = self.graph.get_scatter_points()
             xlim, ylim = self.graph.get_plot_lim(sc_x_, sc_y_)
 
-            if self.plot_show: plt.ion()
-            else: plt.ioff()
+            if self.plot_show:
+                plt.ion()
+            else:
+                plt.ioff()
 
+            # Make directory if does not exist
             if self.plot_out_name is not None and not os.path.exists(self.plot_out_name):
                 os.makedirs(self.plot_out_name)
 
@@ -237,12 +268,14 @@ class Visualizer:
                 fig3, ax3 = plt.subplots(1)
                 self.graph.threat_image_init(fig3, ax3)
 
+        # if img is given, open
         if self.img_handle is not None:
             self.img_handle.open(start_frame=start_time)
 
         for t in range(self.time_series_length):
 
             if self.img_handle is not None:
+                # read frame at t=t
                 rgb = self.img_handle.read_frame(t)
                 rgb_ = rgb.copy()
 
@@ -253,6 +286,7 @@ class Visualizer:
 
                 # Plot info from graph
                 if self.graph is not None:
+                    # scatter points?
                     scx_t, scy_t, id_t, line_t, scx_i, scy_i, id_i = self.graph.get_points_t(t)
                     # scx_t = sc_x[:, t]
                     # scy_t = sc_y[:, t]
@@ -260,8 +294,10 @@ class Visualizer:
                     cmap_i = cmap_plot[id_i % col_num]
 
                     if self.graph.pairG is not None:
+                        # Select pairs where group probability > 0.99
                         pairs = np.where(self.graph.pairG[t, :, :] > .99)
-                        if len(pairs)>0:
+                        # len > 0 means, there exists groupable pairs
+                        if len(pairs) > 0:
                             pairs = np.array([pairs[0], pairs[1]], dtype=int).transpose()
 
                     if self.plot_scatter:
@@ -274,20 +310,20 @@ class Visualizer:
 
                     if self.plot_group and self.graph.pairG is not None:
                         for p in pairs:
+                            # i,j is two person groupable
                             i, j = p
                             x1 = self.graph.nodes[i].params["X_project"][t]
-                            y1 = -self.graph.nodes[i].params["Y_project"][t]
+                            y1 = -self.graph.nodes[i].params["Y_project"][t]        # Why -ve?
                             x2 = self.graph.nodes[j].params["X_project"][t]
-                            y2 = -self.graph.nodes[j].params["Y_project"][t]
+                            y2 = -self.graph.nodes[j].params["Y_project"][t]        # Why -ve?
 
                             ax1.plot([x1, x2], [y1, y2], 'k--', linewidth=1)
 
                     if self.mark_ref:
-                        px = np.array(self.graph.DEST)[:, 0]
-                        py = -np.array(self.graph.DEST)[:, 1]
+                        px = np.array(self.graph.DEST)[:, 0]    # X cord
+                        py = -np.array(self.graph.DEST)[:, 1]   # Y Cord
                         ax1.plot(px, py, 'k', linewidth=.5)
                         ax1.plot([px[-1], px[0]], [py[-1], py[0]], 'k', linewidth=.5)
-
 
                     if self.plot_out_name is not None:
                         # Save graph
@@ -299,8 +335,6 @@ class Visualizer:
                         if self.graph.pairT is not None:
                             self.graph.threat_image_save(fig3, ax3, self.plot_out_name, t)
 
-
-
                 # @Suren : TODO : Learn ion properly -_-
                 # self.plot_show = False
 
@@ -308,11 +342,12 @@ class Visualizer:
                 if self.make_vid:
                     if self.vid_scatter:
                         for p in range(len(scx_t)):
-                            cv2.circle(rgb_, (scx_t[p], scy_t[p]), 1, tuple(cmap_vid[p%col_num]), 5)
+                            cv2.circle(rgb_, (scx_t[p], scy_t[p]), 1, tuple(cmap_vid[p % col_num]), 5)
 
                     if self.vid_lines:
                         for l in line_t:
-                            cv2.line(rgb_, tuple(np.array(l[:, 0]).astype(int)), tuple(np.array(l[:, 1]).astype(int)),(255, 255, 255), 3)
+                            cv2.line(rgb_, tuple(np.array(l[:, 0]).astype(int)), tuple(np.array(l[:, 1]).astype(int)),
+                                     (255, 255, 255), 3)
 
             # ------------------------------- MAKE VIDEO ----------------------------------
 
@@ -327,12 +362,13 @@ class Visualizer:
                 # Plot info of person
                 if self.person_handle is not None and self.vid_bbox:
                     if t_ in self.person_handle.json_data:
-                        NNHandler_person.plot(rgb_, self.person_handle.json_data[t_], cmap_vid, self.person_handle.is_tracked)
+                        NNHandler_person.plot(rgb_, self.person_handle.json_data[t_], cmap_vid,
+                                              self.person_handle.is_tracked)
                         # TODO @suren : match colour in graph and vid
-
 
                 if self.vid_group and self.graph is not None and self.graph.pairG is not None:
                     for p in pairs:
+                        # i,j indicates two person
                         i, j = p
                         x1 = self.graph.nodes[i].params["X"][t]
                         y1 = self.graph.nodes[i].params["Y"][t]
@@ -342,7 +378,6 @@ class Visualizer:
                         cv2.line(rgb_, (int(x1), int(y1)), (int(x2), int(y2)), (255, 255, 255), 3)
                         cv2.circle(rgb_, (int(x1), int(y1)), 1, (0, 0, 0), 7)
                         cv2.circle(rgb_, (int(x2), int(y2)), 1, (0, 0, 0), 7)
-
 
                 # Plot info from handshake
                 if self.hs_handle is not None and self.vid_hbox:
@@ -355,21 +390,24 @@ class Visualizer:
 
                 # Plot info from graph
                 if self.graph is not None and self.graph.frameThreatLevel is not None:
-                    font = 0 #cv2.FONT_HERSHEY_PLAIN
+                    font = 0  # cv2.FONT_HERSHEY_PLAIN
                     h, w, _ = rgb_.shape
-                    offset_x, offset_y = int(.1*h), int(.9*h)
-                    font_scale = w*.75 / float(720)
+                    offset_x, offset_y = int(.1 * h), int(.9 * h)
+                    font_scale = w * .75 / float(720)
                     # print(font_scale, font, offset_x, offset_y)
-                    cv2.putText(rgb_, "%.4f"%(self.graph.frameThreatLevel[t]), (offset_x, offset_y), font, font_scale, (0, 0, 0), 3)
-                    cv2.putText(rgb_, "%.4f"%(self.graph.frameThreatLevel[t]), (offset_x, offset_y), font, font_scale, (255, 255, 255), 2)
-
+                    cv2.putText(rgb_, "%.4f" % (self.graph.frameThreatLevel[t]), (offset_x, offset_y), font, font_scale,
+                                (0, 0, 0), 3)
+                    cv2.putText(rgb_, "%.4f" % (self.graph.frameThreatLevel[t]), (offset_x, offset_y), font, font_scale,
+                                (255, 255, 255), 2)
 
                 # save video
                 if self.vid_out_name is not None:
                     vid_out.write(rgb_)
 
                 if self.plot_out_name is not None:
-                    if self.debug: print("{}fr-{:04d}.jpg".format(self.img_out_name, t))
+                    if self.debug:
+                        print("{}fr-{:04d}.jpg".format(self.img_out_name, t))
+
                     cv2.imwrite("{}fr-{:04d}.jpg".format(self.img_out_name, t), rgb_)
                     cv2.imwrite("{}inp-{:04d}.jpg".format(self.img_out_name, t), rgb)
 
@@ -381,9 +419,10 @@ class Visualizer:
 
                 k = cv2.waitKey(WAIT)
 
-                if k & 0xff == ord('q'): break
-                elif k & 0xff == ord('g') or WAIT != 0: pass # self.network_show = True
-
+                if k & 0xff == ord('q'):
+                    break
+                elif k & 0xff == ord('g') or WAIT != 0:
+                    pass  # self.network_show = True
 
             if self.make_plot and self.plot_show:
                 ax1.clear()
@@ -398,36 +437,40 @@ class Visualizer:
 
         if self.vid_out_name is not None:
             vid_out.release()
-    # cap.release()
+        # cap.release()
         cv2.destroyAllWindows()
 
     # plt.show(block=True)
 
-
-    def mergePhotos(self,directory=None,noFrames=100):
-        if directory is None: directory=self.plot_out_name
+    def mergePhotos(self, directory=None, noFrames=100):
+        # directory could be given here or at instantiation
+        if directory is None:
+            directory = self.plot_out_name
 
         out_dir = directory + "/merged/"
-        if not os.path.exists(out_dir) : os.makedirs(out_dir)
+        # If merged directory not present, create
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
 
         # Extension
-        OUTPUT_FILE_TYPE="mp4"#"mp4" | "webm"
+        OUTPUT_FILE_TYPE = "mp4"  # "mp4" | "webm" | "avi"
 
         # Output size : (w_out, h_out)
         h_out = 720
 
         h_pic = h_out // 2
-        w2 = int(h_pic/0.75)
+        w2 = int(h_pic / 0.75)
 
         try:
             img_temp = "{}fr-{:04d}.jpg".format(directory, 0)
             h, w, _ = cv2.imread(img_temp).shape
-            w_pic = int(h_pic/float(h)*w)
+            w_pic = int(h_pic / float(h) * w)
         except FileNotFoundError:
-            w_pic = int(h_pic/0.75)
+            w_pic = int(h_pic / 0.75)
 
         w_out = w2 + w_pic
 
+        # out video could only be mp4,avi or webm
         outVideoName = "{}merged.{}".format(out_dir, OUTPUT_FILE_TYPE)
         if OUTPUT_FILE_TYPE == "avi":
             mergedFourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -439,25 +482,25 @@ class Visualizer:
             raise NotImplementedError
         mergedVideoOut = cv2.VideoWriter(outVideoName, mergedFourcc, 20.0, (w_out, h_out))
 
-        #This is a hardcoded function
-        imgPefixes=["fr","G","dimg","T"]
-        img_sizes = [(h_pic, w_pic), (h_out-h_pic, w_pic), (h_pic, w_out-w_pic), (h_out-h_pic, w_out-w_pic)]
+        # THIS IS A HARDCODED FUNCTION !!!
+        imgPefixes = ["fr", "G", "dimg", "T"]
+        img_sizes = [(h_pic, w_pic), (h_out - h_pic, w_pic), (h_pic, w_out - w_pic), (h_out - h_pic, w_out - w_pic)]
         img_pad = [(0, 0), (h_pic, 0), (0, w_pic), (h_pic, w_pic)]
 
-        fivePercentBlock= max(1, int(noFrames/20.0))
-        print("0% of merging completed")        
+        fivePercentBlock = max(1, int(noFrames / 20.0))
+        print("0% of merging completed")
 
         for t in range(noFrames):
             outImg = np.empty((h_out, w_out, 3), dtype=np.uint8)
             # outImg=np.zeros((newH,1,3),dtype=np.uint8)
             for i in range(4):
-                imgName="{}{}-{:04d}.jpg".format(directory,imgPefixes[i],t)
+                imgName = "{}{}-{:04d}.jpg".format(directory, imgPefixes[i], t)
                 if args.debug:
-                    print("Loading file ",imgName)
+                    print("Loading file ", imgName)
 
-                thisImg=cv2.imread(imgName)
+                thisImg = cv2.imread(imgName)
                 out_size = img_sizes[i]
-                thisImg=cv2.resize(thisImg,(out_size[1], out_size[0]))
+                thisImg = cv2.resize(thisImg, (out_size[1], out_size[0]))
 
                 h_start = img_pad[i][0]
                 h_end = h_start + out_size[0]
@@ -471,57 +514,62 @@ class Visualizer:
             mergedVideoOut.write(outImg)
             # print(newW,newH)
 
-            if t%fivePercentBlock==0:
-                print("{:.2f}% of merging completed".format((100*t)/noFrames))
-
+            # Disp completed merging percentage
+            if t % fivePercentBlock == 0:
+                print("{:.2f}% of merging completed".format((100 * t) / noFrames))
 
         mergedVideoOut.release()
         print("100% of merging completed")
 
+
 if __name__ == "__main__":
 
-    parser=argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
 
     # IGNORE THIS
     # parser.add_argument("--nnout_openpose",'-p',type=str,dest="nnout_openpose",default='./data/vid-01-openpose_track.json')
 
-    parser.add_argument("--input","-i", type=str, default='./data/videos/seq18.avi') # Change this : input fil
-    parser.add_argument("--person","-p", type=str, default='./data/labels/seq18/seq18-person.json') # Change this : person
-    parser.add_argument("--handshake","--hs", type=str, default='./data/labels/seq18/seq18-handshake.json') # Change this : handshake
-    parser.add_argument("--cam", "-c", type=str, default="./data/camera-orientation/jsons/uti.json") # Change this: camfile
+    parser.add_argument("--input", "-i", type=str, default='./data/videos/seq18.avi')  # Change this : input fil
+    parser.add_argument("--person", "-p", type=str,
+                        default='./data/labels/seq18/seq18-person.json')  # Change this : person
+    parser.add_argument("--handshake", "--hs", type=str,
+                        default='./data/labels/seq18/seq18-handshake.json')  # Change this : handshake
+    parser.add_argument("--cam", "-c", type=str,
+                        default="./data/camera-orientation/jsons/uti.json")  # Change this: camfile
 
-    parser.add_argument("--graph","-g", type=str, default='./data/output/seq18/seq18-graph-temp.json') # Change this : INCOMPLETE (Make sure this isn't None)
+    parser.add_argument("--graph", "-g", type=str,
+                        default='./data/output/seq18/seq18-graph-temp.json')  # Change this : INCOMPLETE (Make sure this isn't None)
 
-    parser.add_argument("--output","-o", type=str, default='./data/output/seq18-temp/') # Change this : output dir
+    parser.add_argument("--output", "-o", type=str, default='./data/output/seq18-temp/')  # Change this : output dir
 
-    parser.add_argument("--visualize","-v", action="store_true", help="Visualize the video output") # Change this
+    parser.add_argument("--visualize", "-v", action="store_true", help="Visualize the video output")  # Change this
 
-    parser.add_argument("--overwrite_graph","-owg", type=bool, default=False) # Change this : INCOMPLETE
+    parser.add_argument("--overwrite_graph", "-owg", type=bool, default=False)  # Change this : INCOMPLETE
     parser.add_argument("--track", "-tr", type=bool, dest="track", default=True)
     parser.add_argument("--debug", "-db", type=bool, dest="debug", default=False)
 
     args = parser.parse_args()
 
     # config_file = None
-    config_file = "./data/config/deee.ini"
+    config_file = "./data/config/test.ini"
     start_time = 0
-    end_time = 1000
-    col_num = 6
+    end_time = None     # What's the use of this?
+    col_num = 6         # " "
 
     if config_file is not None:
+        # read_ini() could be called without an object
         args = Visualizer.read_ini(config_file, args)
 
-    #Override
+    # OVERRIDE!! parameters could be overridden from outside
     args.visualize = False
     args.overwrite_graph = True
-    plot_group = True               # This may increase the time a lot.
+    plot_group = True  # This may increase the time a lot.
 
     print(args)
 
-
     # Initiate image handler
     if args.input is not None:
-        img_handle = NNHandler_image(format="avi", img_loc=args.input)
+        img_handle = NNHandler_image(format="mp4", img_loc=args.input)
         img_handle.runForBatch(start_time, end_time)
     else:
         img_handle = None
@@ -547,7 +595,6 @@ if __name__ == "__main__":
             hs_handler.save_json()
     else:
         hs_handler = None
-
 
     # openpose_handler = NNHandler_openpose(openpose_file=args.nnout_openpose,  is_tracked=args.track)
     # openpose_handler.init_from_json()
@@ -597,7 +644,7 @@ if __name__ == "__main__":
 
     # Call this to plot cv2 video
     if args.output is not None or args.visualize:
-        vis.init_vid(vid_out= vid_loc, img_out=plot_loc, vid_show=args.visualize, vid_group=plot_group)
+        vis.init_vid(vid_out=vid_loc, img_out=plot_loc, vid_show=args.visualize, vid_group=plot_group)
 
     print("-----------------\nIf pyplot is visible and WAIT == 0, press 'g' to plot current graph\n-----------------")
 

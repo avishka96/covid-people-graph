@@ -7,15 +7,18 @@ import os
 import sys
 import numpy as np
 
+
+# Refer this. Not importance algorithmically.
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+
 
 class Json():
 
     def __init__(self, name, OW=False, verbose=True):
         self.name = name
 
-        if os.path.exists(name) and OW==False:
+        if os.path.exists(name) and OW == False:
             if verbose: print("json file exists")
         else:
             if verbose: print("creating json file")
@@ -27,24 +30,20 @@ class Json():
         with open(self.name, 'w+') as outfile:
             json.dump(data, outfile, indent=4)
 
-
     def read(self):
         with open(self.name, 'r') as file:
             if len(file.readlines()) != 0: file.seek(0)
             data = json.load(file)
         return data
 
-
     def update(self, data):
         temp = self.read()
         temp.update(data)
         self.write(temp)
 
-
     def read_data(self, attr):
         data = self.read()
         return data[attr]
-
 
     @staticmethod
     def is_jsonable(x):
@@ -52,6 +51,7 @@ class Json():
             json.dumps(x)
         except Exception as e:
             raise Exception(e)
+
 
 def get_iou(bb1, bb2, mode=0):
     """
@@ -80,10 +80,10 @@ def get_iou(bb1, bb2, mode=0):
 
     # print(bb1, bb2)
 
-    assert bb1[0] <= bb1[2], "bb1[0] < bb1[2], (%d, %d)"%(bb1[0], bb1[2])
-    assert bb1[1] <= bb1[3], "bb1[1] < bb1[3], (%d, %d)"%(bb1[1], bb1[3])
-    assert bb2[0] <= bb2[2], "bb2[0] < bb2[2], (%d, %d)"%(bb2[0], bb2[2])
-    assert bb2[1] <= bb2[3], "bb2[1] < bb2[3], (%d, %d)"%(bb2[1], bb2[3])
+    assert bb1[0] <= bb1[2], "bb1[0] < bb1[2], (%d, %d)" % (bb1[0], bb1[2])
+    assert bb1[1] <= bb1[3], "bb1[1] < bb1[3], (%d, %d)" % (bb1[1], bb1[3])
+    assert bb2[0] <= bb2[2], "bb2[0] < bb2[2], (%d, %d)" % (bb2[0], bb2[2])
+    assert bb2[1] <= bb2[3], "bb2[1] < bb2[3], (%d, %d)" % (bb2[1], bb2[3])
 
     # determine the coordinates of the intersection rectangle
     x_left = max(bb1[0], bb2[0])
@@ -115,8 +115,10 @@ def get_iou(bb1, bb2, mode=0):
     assert iou <= 1.0
     return iou
 
+
 def stop():
     input("Enter to continue")
+
 
 def progress(count, total, status=''):
     # bar_len = 60
@@ -150,12 +152,9 @@ def iou_batch(bb_test, bb_gt):
     return (o)
 
 
-
-
 def read_ini(file_path, config_json):
     config = configparser.ConfigParser()
     config.read(file_path)
     for section in config.sections():
         for key in config[section]:
             print((key, config[section][key]))
-

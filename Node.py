@@ -16,6 +16,7 @@ class Node:
         self.type = ty
 
     def addParam(self, param):
+        # _ used as a variable
         self.params[param] = [None for _ in range(self.time_series_length)]
 
     def addStaticParam(self, param, val):

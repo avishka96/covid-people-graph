@@ -53,7 +53,7 @@ except Exception as e:
 
 
 class NNHandler_yolo(NNHandler):
-	yolo_dir = os.path.dirname(os.path.realpath(__file__)) + "/model/yolov4-deepsort"
+	yolo_dir = os.path.dirname(os.path.realpath(__file__)) + "/submodules/yolov4-deepsort"
 
 	model_filename = yolo_dir + '/model_data/mars-small128.pb'
 	weigths_filename = yolo_dir + '/checkpoints/yolov4-416'
@@ -61,6 +61,7 @@ class NNHandler_yolo(NNHandler):
 	class_names = None
 
 	# Definition of the parameters
+	# Refer the meaning of parameters later.
 	max_cosine_distance = 0.4
 	nn_budget = None
 	nms_max_overlap = 1.0
@@ -73,6 +74,7 @@ class NNHandler_yolo(NNHandler):
 	def YOLO_import():
 		raise NotImplementedError
 
+	# Command line Execution. Refer documentation later.
 	@staticmethod
 	def get_parse():
 		parser = argparse.ArgumentParser()
@@ -88,10 +90,15 @@ class NNHandler_yolo(NNHandler):
 		args = parser.parse_args()
 		return args
 
+	# Note : Three types of methods. (1) Regular Method - general methods in a class definition. Takes object (self) as
+	# a parameter. (2) Class Method - defined on a class not an object. Takes (cls) as a parameter. Typically used as
+	# an alternative generator (object instantiation) method. (3) Static Method - Defined independent on object (self)
+	# or class (cls), but has some relationship to the class.
 	@staticmethod
 	def plot(img, bb_list:list, colors:list, is_tracked=False):
 		n_col = len(colors)
 		for i, bbox in enumerate(bb_list):
+			# maps int() to [bbox[], bbox[], .... ]
 			x_min, x_max, y_min, y_max = map(int, [bbox["x1"], bbox["x2"], bbox["y1"], bbox["y2"]])
 
 			if is_tracked:
@@ -104,18 +111,21 @@ class NNHandler_yolo(NNHandler):
 			col = colors[p_id%n_col]
 			cv2.rectangle(img, (x_min, y_min), (x_max, y_max), tuple(col), 2)
 
-
+	# Yolo handler object intialization
 	def __init__(self, json_file=None, is_tracked=True, vis=True, verbose=True, debug=False):
 
+		# Inherited from NNhandler class. All methods and attributes inherited to this class.
 		super().__init__()
 
 		print("Creating a YOLO handler")
 
+		# Attributes
 		self.json_file = json_file
 		self.is_tracked = is_tracked
 		self.visualize = vis
 		self.verbose = verbose
 		self.debug = debug
+
 
 	def create_yolo(self, img_handle, temp_name=False):
 		"""
@@ -123,14 +133,28 @@ class NNHandler_yolo(NNHandler):
 		:return:
 		"""
 
+		# Checking for the presence of yolo dir, model, weights
 		# if not import_tracker(): raise Exception("Couldn't create tracker")
-		if not os.path.exists(self.yolo_dir): raise Exception("Couldn't find yolo_directory : %s" % (self.yolo_dir))
-		if not os.path.exists(self.model_filename): raise Exception("Couldn't find model : %s" % (self.model_filename))
-		if not os.path.exists(self.weigths_filename): raise Exception("Couldn't find weights : %s" % (self.weigths_filename))
+		if not os.path.exists(self.yolo_dir):
+			raise Exception("Couldn't find yolo_directory : %s" % (self.yolo_dir))
+		if not os.path.exists(self.model_filename):
+			raise Exception("Couldn't find model : %s" % (self.model_filename))
+		if not os.path.exists(self.weigths_filename):
+			raise Exception("Couldn't find weights : %s" % (self.weigths_filename))
 
+		# Dict
 		tracked_person = {}
 
 		# Definition of the parameters
+		# Typical values. Defined earlier
+		# max_cosine_distance = 0.4
+		# nn_budget = None
+		# nms_max_overlap = 1.0
+
+		# iou_thresh = .45
+		# score_thresh = .5
+		# input_size = 416
+
 		nms_max_overlap = self.nms_max_overlap
 		iou_thresh = self.iou_thresh
 		score_thresh = self.score_thresh
@@ -154,6 +178,7 @@ class NNHandler_yolo(NNHandler):
 		saved_model_loaded = tf.saved_model.load(self.weigths_filename, tags=[tag_constants.SERVING])
 		infer = saved_model_loaded.signatures['serving_default']
 
+		# Input image/video
 		frame_num = 0
 		img_handle.open()
 		for t in tqdm(range(img_handle.time_series_length)):
@@ -162,7 +187,8 @@ class NNHandler_yolo(NNHandler):
 			frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 			frame_num += 1
 
-			if self.verbose: print('Frame #: ', frame_num)
+			if self.verbose:
+				print('Frame #: ', frame_num)
 			# if t < 1000: continue
 
 			frame_size = frame.shape[:2]
@@ -309,7 +335,8 @@ class NNHandler_yolo(NNHandler):
 
 				dic = {"x1": bbox[0], "y1": bbox[1], "x2": bbox[2], "y2": bbox[3], "id": id}
 
-				if temp_name: dic["name"] = class_name
+				if temp_name:
+					dic["name"] = class_name
 
 				person_t.append(dic)
 
@@ -318,9 +345,11 @@ class NNHandler_yolo(NNHandler):
 
 			if self.visualize:
 				cv2.imshow("Output Video", result)
-				if cv2.waitKey(20) & 0xFF == ord('q'): break
+				if cv2.waitKey(20) & 0xFF == ord('q'):
+					break
 
-			if len(person_t) > 0: tracked_person[t] = person_t
+			if len(person_t) > 0:
+				tracked_person[t] = person_t
 
 		if self.visualize:
 			cv2.destroyAllWindows()
@@ -328,9 +357,14 @@ class NNHandler_yolo(NNHandler):
 		self.time_series_length = frame_num
 		self.json_data = tracked_person
 
+	# Same init_from_json as in NNhandler Image.
+	# Why required again? Cauz, inherited from NNHandler
 	def init_from_json(self, file_name=None):
-		if file_name is None: file_name = self.json_file
-		if file_name is None or not os.path.exists(file_name): raise ValueError("Json File does not exists : %s"%file_name)
+		# File could be given when instantiating or during calling this function
+		if file_name is None:
+			file_name = self.json_file
+		if file_name is None or not os.path.exists(file_name):
+			raise ValueError("Json File does not exists : %s"%file_name)
 
 		if self.verbose:
 			print("\t[*] Init from file : %s"%file_name)
@@ -339,15 +373,20 @@ class NNHandler_yolo(NNHandler):
 			data = json.load(json_file)
 
 		self.time_series_length = data.pop("frames")
+		# data is a python dict
 		self.json_data = data
 
 		self.ftype = "json"
 
 		return self.json_data
 
+
 	def save_json(self, file_name=None):
-		if file_name is None: file_name = self.json_file
-		if not os.path.exists(os.path.dirname(file_name)) : os.makedirs(os.path.dirname(file_name))
+		if file_name is None:
+			file_name = self.json_file
+		# If json_file does not exist in the path, create a file
+		if not os.path.exists(os.path.dirname(file_name)):
+			os.makedirs(os.path.dirname(file_name))
 
 		js = Json(file_name)
 		dic = {"frames": self.time_series_length}
@@ -363,8 +402,8 @@ class NNHandler_yolo(NNHandler):
 '''
 if __name__=="__main__":
 
-	img_loc = "./suren/temp/seq18.avi"
-	json_loc = "./data/vid-01-yolo.json"
+	img_loc = "./suren/temp/test.mp4"
+	json_loc = "./data/vid-test-yolo.json"
 
 	parser = argparse.ArgumentParser()
 
@@ -381,7 +420,7 @@ if __name__=="__main__":
 	json_loc = args.nnout_yolo
 
 	# TEST
-	img_handle = NNHandler_image(format="avi", img_loc=img_loc)
+	img_handle = NNHandler_image(format="mp4", img_loc=img_loc)
 	img_handle.runForBatch()
 
 	nn_yolo = NNHandler_yolo(vis=args.visualize, is_tracked=args.tracked)

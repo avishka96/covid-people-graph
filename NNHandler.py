@@ -26,7 +26,9 @@ class NNHandler:
 	def init_from_json(self, file_name=None):
 		# Read json file
 		pass
-		# raise NotImplementedError
+		# raise NotImplementedError_
+
+
 
 
 

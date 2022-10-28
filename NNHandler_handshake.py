@@ -18,7 +18,7 @@ class NNHandler_handshake(NNHandler_yolo):
 
 
 	# model_filename = yolo_dir + '/model_data/mars-small128.pb'
-	weigths_filename = NNHandler_yolo.yolo_dir + '/checkpoints/yolov4-fullshake_best'
+	weigths_filename = NNHandler_yolo.yolo_dir + '/checkpoints/yolov4-fullshake_best-416'
 
 
 	class_names = ["Handshake"]
@@ -50,8 +50,10 @@ class NNHandler_handshake(NNHandler_yolo):
 		print("\t[*] Handshake detector")
 
 	def update_handshake(self, start_time=None, end_time = None):
-		if start_time is None: start_time = 0
-		if end_time is None: end_time = self.time_series_length
+		if start_time is None:
+			start_time = 0
+		if end_time is None:
+			end_time = self.time_series_length
 
 		# Use self.graph and find the two people using maximum intersection area
 		graph = self.graph
@@ -171,7 +173,8 @@ class NNHandler_handshake(NNHandler_yolo):
 			for t in handshake_data:
 				t_ = int(t)
 
-				if not (start_time <= t_ < end_time): continue
+				if not (start_time <= t_ < end_time):
+					continue
 
 				t_ -= start_time
 
@@ -194,7 +197,7 @@ class NNHandler_handshake(NNHandler_yolo):
 					# iou between bb_hs and bb_person (node_t)
 					iou = iou_batch([bb_hs], node_t)
 
-					# print(iou) #, np.array(iou).shape)
+					# print(iou)
 
 					# iou = list(map(lambda x: get_iou(bb_hs, x, mode=1), node_t))
 					shakes[idx][t_] = iou[0]
@@ -250,8 +253,8 @@ class NNHandler_handshake(NNHandler_yolo):
 
 if __name__ == "__main__":
 
-	json_loc = "./data/labels/DEEE/handshake/cctv1.json"
-	img_loc = "./data/videos/DEEE/cctv1.mp4"
+	json_loc = "./data/labels/Test/test_out_handshake.json"
+	img_loc = "./suren/temp/frames"
 
 	parser = argparse.ArgumentParser()
 
@@ -269,7 +272,7 @@ if __name__ == "__main__":
 	json_loc = args.output_file
 
 	# TEST
-	img_handle = NNHandler_image(format="avi", img_loc=img_loc)
+	img_handle = NNHandler_image(format="png", img_loc=img_loc)
 	img_handle.runForBatch()
 
 	hs_handle = NNHandler_handshake(vis=args.visualize, is_tracked=args.tracked)
